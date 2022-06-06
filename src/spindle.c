@@ -110,11 +110,11 @@ els_spindle_direction_t els_spindle_get_direction(void) {
 // Internal functions
 //==============================================================================
 static void els_spindle_configure_gpio(void) {
-  gpio_mode_setup(ELS_S_ENCODER1_PORTA, GPIO_MODE_AF, GPIO_PUPD_PULLUP, ELS_S_ENCODER1_PINA);
-  gpio_mode_setup(ELS_S_ENCODER1_PORTB, GPIO_MODE_AF, GPIO_PUPD_PULLUP, ELS_S_ENCODER1_PINB);
+  gpio_mode_setup(ELS_S_ENCODER1_PORTA, GPIO_MODE_AF, GPIO_PUPD_PULLUP, ELS_S_ENCODER1_PINA); //GPIO6
+  gpio_mode_setup(ELS_S_ENCODER1_PORTB, GPIO_MODE_AF, GPIO_PUPD_PULLUP, ELS_S_ENCODER1_PINB); //GPIO7
 
-  gpio_set_af(ELS_S_ENCODER1_PORTA, ELS_S_ENCODER1_AFA, ELS_S_ENCODER1_PINA);
-  gpio_set_af(ELS_S_ENCODER1_PORTB, ELS_S_ENCODER1_AFB, ELS_S_ENCODER1_PINB);
+  gpio_set_af(ELS_S_ENCODER1_PORTA, ELS_S_ENCODER1_AFA, ELS_S_ENCODER1_PINA); //GPIO_AF2
+  gpio_set_af(ELS_S_ENCODER1_PORTB, ELS_S_ENCODER1_AFB, ELS_S_ENCODER1_PINB); //GPIO_AF2
 }
 
 static void els_spindle_configure_timer(void) {
@@ -122,7 +122,7 @@ static void els_spindle_configure_timer(void) {
   rcc_periph_reset_pulse(ELS_ENCODER_TIMER1_RST);
 
   timer_set_prescaler(ELS_ENCODER_TIMER1, 0);
-  timer_slave_set_mode(ELS_ENCODER_TIMER1, TIM_SMCR_SMS_EM2);
+  timer_slave_set_mode(ELS_ENCODER_TIMER1, TIM_SMCR_SMS_EM2); //Encoder mode 2 - Counter counts up/down on TI1FP1 edge depending on TI2FP2 level.
 
   timer_ic_set_input(ELS_ENCODER_TIMER1, TIM_IC1, TIM_IC_IN_TI1);
   timer_ic_set_input(ELS_ENCODER_TIMER1, TIM_IC2, TIM_IC_IN_TI1);
