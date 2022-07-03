@@ -33,11 +33,8 @@ tft_device_t tft = {
   .ili9481.rs   = {.port = GPIOB, .pin = GPIO7},
   .ili9481.cs   = {.port = GPIOB, .pin = GPIO8},
   .ili9481.rst  = {.port = GPIOB, .pin = GPIO9},
-  .ili9481.data = {.port = GPIOA, .pin = GPIO0 | GPIO1 | GPIO2 | GPIO3 | GPIO4},
-  .ili9481.data |= {.port = GPIOB, .pin = GPIO13},
-  .ili9481.data |= {.port = GPIOA, .pin = GPIO14 | GPIO15}
+  .ili9481.data = {.port = GPIOA, .pin = GPIO0 | GPIO1 | GPIO2 | GPIO3 | GPIO4 | GPIO5 | GPIO6 | GPIO7 }
 };
-// .ili9481.data = {.port = GPIOA, .pin = GPIO0 | GPIO1 | GPIO2 | GPIO3 | GPIO4 | GPIO5 | GPIO6 | GPIO7 }
 
 //==============================================================================
 // ELS Core
