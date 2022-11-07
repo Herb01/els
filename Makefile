@@ -11,7 +11,8 @@ STLINK   ?= 0
 
 STM32F446 = 1
 
-#CFLAGS   += -DELS_DEBUG=1
+CFLAGS   += -DELS_DEBUG=0
+CFLAGS   += -DDEBUG=0
 
 CFLAGS   += -DGIT_SHA=\"$(GIT_SHA)\" -DBUILD_TS=\"$(BUILD_TS)\"
 CFLAGS   += -Isrc -DVERBOSE=$(VERBOSE)
@@ -19,9 +20,11 @@ CFLAGS   += -std=gnu99 -mfloat-abi=hard
 CFLAGS   += -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Os
 #CFLAGS   += -ffast-math
 #CFLAGS   += -frounding-math -fsignaling-nans -ffloat-store -ffp-contract=off
+CFLAGS   += -O0
 
 LDFLAGS  += -u _printf_float -lnosys --specs=nano.specs
 LDFLAGS  += -Wl,--gc-sections,--sort-section=alignment
+#LDFLAGS   += --specs=rdimon.specs -lc -lrdimon
 LDLIBS   += -lm
 V       ?= 1
 

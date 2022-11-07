@@ -11,6 +11,7 @@
                        a = a ^ b; \
                      } while (0)
 
+uint16_t tft_id;
 
 static void tft_write_bus(const tft_device_t *tft, uint8_t data) {
   tft_gpio_clear(tft->ili9481.data.port, tft->ili9481.data.pin);
@@ -81,16 +82,16 @@ static uint16_t tft_read_register(const tft_device_t *tft, uint16_t reg, int ind
   uint16_t ret = 0, high, low;
 
   tft_gpio_clear(tft->ili9481.cs.port, tft->ili9481.cs.pin);
-  tft_write_comm16(tft, reg);
   tft_delay_microseconds(1);
+  tft_write_comm16(tft, reg);
   tft_gpio_mode_input(tft->ili9481.data.port, tft->ili9481.data.pin);
+
 
   do {
     high = tft_read_data8(tft);
     low  = tft_read_data8(tft);
     ret  = (high << 8 | low);
   } while (--index >= 0);
-
   tft_gpio_set(tft->ili9481.cs.port, tft->ili9481.cs.pin);
   tft_gpio_mode_output(tft->ili9481.data.port, tft->ili9481.data.pin);
 
@@ -112,6 +113,98 @@ static uint32_t tft_read_register40(const tft_device_t *tft, uint16_t reg) {
   return (h << 24) | (m << 8) | (l >> 8);
 }
 
+static uint16_t tft_readID(const tft_device_t *tft) {
+    uint16_t ret, ret2;
+    uint8_t msb;
+
+    ret = tft_read_register(tft, 0, 0);
+               //forces a reset() if called before begin()
+    if (ret == 0x5408)          //the SPFD5408 fails the 0xD3D3 test.
+        return 0x5408;
+    if (ret == 0x5420)          //the SPFD5420 fails the 0xD3D3 test.
+        return 0x5420;
+    if (ret == 0x8989)          //SSD1289 is always 8989
+        return 0x1289;
+    ret = tft_read_register(tft, 0x67, 0);       //HX8347-A
+    if (ret == 0x4747)
+        return 0x8347;
+    ret = tft_read_register40(tft, 0xEF);      //ILI9327: [xx 02 04 93 27 FF]
+    if (ret == 0x9327)
+        return 0x9327;
+//#if defined(SUPPORT_1963) && USING_16BIT_BUS
+    ret = tft_read_register32(tft, 0xA1);      //SSD1963: [01 57 61 01]
+    if (ret == 0x6101)
+        return 0x1963;
+    if (ret == 0xFFFF)          //R61526: [xx FF FF FF]
+        return 0x1526;          //subsequent begin() enables Command Access
+    if (ret == 0xFF00)          //R61520: [xx FF FF 00]
+        return 0x1520;          //subsequent begin() enables Command Access
+    if (ret == 0xF000)          //S6D05A1: [xx F0 F0 00]
+        return 0x05A1;          //subsequent begin() enables Command Access
+//#endif
+	ret = tft_read_register40(tft, 0xBF);
+	if (ret == 0x8357)          //HX8357B: [xx 01 62 83 57 FF]
+        return 0x8357;
+	if (ret == 0x9481)          //ILI9481: [xx 02 04 94 81 FF]
+        return 0x9481;
+    if (ret == 0x1511)          //?R61511: [xx 02 04 15 11] not tested yet
+        return 0x1511;
+    if (ret == 0x1520)          //?R61520: [xx 01 22 15 20]
+        return 0x1520;
+    if (ret == 0x1526)          //?R61526: [xx 01 22 15 26]
+        return 0x1526;
+    if (ret == 0x1581)          //R61581:  [xx 01 22 15 81]
+        return 0x1581;
+    if (ret == 0x1400)          //?RM68140:[xx FF 68 14 00] not tested yet
+        return 0x6814;
+    ret = tft_read_register32(tft, 0xD4);
+    if (ret == 0x5310)          //NT35310: [xx 01 53 10]
+        return 0x5310;
+    ret = tft_read_register32(tft, 0xD7);
+    if (ret == 0x8031)          //weird unknown from BangGood [xx 20 80 31] PrinceCharles
+        return 0x8031;
+    ret = tft_read_register32(tft, 0xFE) >> 8; //weird unknown from BangGood [04 20 53]
+    if (ret == 0x2053)
+        return 0x2053;
+    uint32_t ret32 = tft_read_register32(tft, 0x04);
+    msb = ret32 >> 16;
+    ret = ret32;
+    if (msb == 0xE3 && ret == 0x0000) return 0xE300; //reg(04) = [xx E3 00 00] BangGood
+//    if (msb == 0x38 && ret == 0x8000) //unknown [xx 38 80 00] with D3 = 0x1602
+
+//    if (msb == 0xFF && ret == 0xFFFF) //R61526 [xx FF FF FF]
+//        return 0x1526;          //subsequent begin() enables Command Access
+    if (ret == 0x1526)          //R61526 [xx 06 15 26] if I have written NVM
+        return 0x1526;          //subsequent begin() enables Command Access
+	if (ret == 0x89F0)          //ST7735S: [xx 7C 89 F0]
+        return 0x7735;
+	if (ret == 0x8552)          //ST7789V: [xx 85 85 52]
+        return 0x7789;
+    if (ret == 0xAC11)          //?unknown [xx 61 AC 11]
+        return 0xAC11;
+    ret32 = tft_read_register32(tft, 0xD3);      //[xx 91 63 00]
+    ret = ret32 >> 8;
+    if (ret == 0x9163) return ret;
+    ret = tft_read_register32(tft, 0xD3);      //for ILI9488, 9486, 9340, 9341
+    if (ret == 0x3229) return ret;
+    msb = ret >> 8;
+    if (msb == 0x93 || msb == 0x94 || msb == 0x98 || msb == 0x77 || msb == 0x16)
+        return ret;             //0x9488, 9486, 9340, 9341, 7796
+    if (ret == 0x00D3 || ret == 0xD3D3)
+        return ret;             //16-bit write-only bus
+/*
+	msb = 0x12;                 //read 3rd,4th byte.  does not work in parallel
+	pushCommand(0xD9, &msb, 1);
+	ret2 = readReg(0xD3);
+    msb = 0x13;
+	pushCommand(0xD9, &msb, 1);
+	ret = (ret2 << 8) | readReg(0xD3);
+//	if (ret2 == 0x93)
+    	return ret2;
+*/
+	return tft_read_register(tft, 0, 0);          //0154, 7783, 9320, 9325, 9335, B505, B509
+}
+
 void tft_init(const tft_device_t *tft) {
   // init pins
   tft_gpio_mode_output(tft->ili9481.rd.port, tft->ili9481.rd.pin);
@@ -131,14 +224,17 @@ void tft_init(const tft_device_t *tft) {
   tft_gpio_set(tft->ili9481.rst.port, tft->ili9481.rst.pin);
   tft_delay_microseconds(1000);
 
+  tft_delay_microseconds(50000);
   tft_gpio_clear(tft->ili9481.rst.port, tft->ili9481.rst.pin);
-  tft_delay_microseconds(1000);
+  tft_delay_microseconds(100000);
   tft_gpio_set(tft->ili9481.rst.port, tft->ili9481.rst.pin);
-  tft_delay_microseconds(1000);
+  tft_delay_microseconds(100000);
 
   // unlock E0 F0
   tft_write_comm_data(tft, 0xB0, 0x0000);
 
+
+  tft_id = tft_readID(tft);
 #ifdef DEBUG
   uint32_t r40 = tft_read_register40(tft, 0xBF);
   printf("ID = 0x%04x\n", (uint16_t)(r40 & 0xFFFF));
@@ -165,78 +261,231 @@ void tft_init(const tft_device_t *tft) {
   tft_write_comm8(tft, 0xB0);
   tft_write_data8(tft, 0x00);
 
-  //Frame Memory, interface [02 00 00 00]
-  tft_write_comm8(tft, 0xB3);
-  tft_write_data8(tft, 0x02);
-  tft_write_data8(tft, 0x00);
-  tft_write_data8(tft, 0x00);
-  tft_write_data8(tft, 0x00);
+  if (tft_id == 0x6814) {
+	  // Display function control
+	  tft_write_comm8(tft, 0xB6);
+	  tft_write_data8(tft, 0x00);
+	  tft_write_data8(tft, 0x02);
+	  tft_write_data8(tft, 0x3B);
 
-  // Frame mode [00]
-  tft_write_comm8(tft, 0xB4);
-  tft_write_data8(tft, 0x00);
+	  // Memory data access control
+	  tft_write_comm8(tft, 0x36);
+	  tft_write_data8(tft, 0x8);
 
-  // Set Power [00 43 18] x1.00, x6, x3
-  tft_write_comm8(tft, 0xD0);
-  tft_write_data8(tft, 0x07);
-  tft_write_data8(tft, 0x42);
-  tft_write_data8(tft, 0x17);
+	  // Column address set
+	  tft_write_comm8(tft, 0x2A);
+	  tft_write_data8(tft, 0x00);
+	  tft_write_data8(tft, 0x00);
+	  tft_write_data8(tft, 0x01);
+	  tft_write_data8(tft, 0x3F);
 
-  // Set VCOM  [00 00 00] x0.72, x1.02
-  tft_write_comm8(tft, 0xD1);
-  tft_write_data8(tft, 0x00);
-  tft_write_data8(tft, 0x07);
-  tft_write_data8(tft, 0x10);
+	  // Row address set
+	  tft_write_comm8(tft, 0x2B);
+	  tft_write_data8(tft, 0x00);
+	  tft_write_data8(tft, 0x00);
+	  tft_write_data8(tft, 0x01);
+	  tft_write_data8(tft, 0xDF);
 
-  // Set Power for Normal Mode [01 22]
-  tft_write_comm8(tft, 0xD2);
-  tft_write_data8(tft, 0x01);
-  tft_write_data8(tft, 0x02);
+	  // Vertical scrolling definition
+	  tft_write_comm8(tft, 0x33);
+	  tft_write_data8(tft, 0x00);
+	  tft_write_data8(tft, 0x00);
+	  tft_write_data8(tft, 0x01);
+	  tft_write_data8(tft, 0xE0);
+	  tft_write_data8(tft, 0x00);
+	  tft_write_data8(tft, 0x00);
 
-  // Set Power for Partial Mode [01 22]
-  tft_write_comm8(tft, 0xD3);
-  tft_write_data8(tft, 0x01);
-  tft_write_data8(tft, 0x02);
+	  // Vertical scrolling start address
+	  tft_write_comm8(tft, 0x37);
+	  tft_write_data8(tft, 0x00);
+	  tft_write_data8(tft, 0x00);
 
-  // Set Power for Idle Mode [01 22]
-  tft_write_comm8(tft, 0xD4);
-  tft_write_data8(tft, 0x01);
-  tft_write_data8(tft, 0x02);
+	  // Normal display mode on
+	  tft_write_comm8(tft, 0x13);
+	  tft_write_data8(tft, 0x00);
 
-  //Panel Driving BGR for 1581 [10 3B 00 02 11]
-  tft_write_comm8(tft, 0xC0);
-  tft_write_data8(tft, 0x12);
-  tft_write_data8(tft, 0x3B);
-  tft_write_data8(tft, 0x00);
-  tft_write_data8(tft, 0x02);
-  tft_write_data8(tft, 0x11);
+	  // Display inversion off
+	  tft_write_comm8(tft, 0x20);
+	  tft_write_data8(tft, 0x00);
 
-  // Display Timing Normal [10 10 88]
-  tft_write_comm8(tft, 0xC1);
-  tft_write_data8(tft, 0x10);
-  tft_write_data8(tft, 0x10);
-  tft_write_data8(tft, 0x88);
 
-  //Frame Rate [03]
-  tft_write_comm8(tft, 0xC5);
-  tft_write_data8(tft, 0x03);
+  }
+  else if (tft_id == 0x9486) {
+	  tft_gpio_clear(tft->ili9481.rst.port, tft->ili9481.rst.pin);
+	   tft_delay_microseconds(1000);
+	   tft_gpio_set(tft->ili9481.rst.port, tft->ili9481.rst.pin);
+	   tft_delay_microseconds(10000);
 
-  //Interface Control [02]
-  tft_write_comm8(tft, 0xC6);
-  tft_write_data8(tft, 0x02);
-  tft_write_comm8(tft, 0xC8);
-  tft_write_data8(tft, 0x00);
-  tft_write_data8(tft, 0x32);
-  tft_write_data8(tft, 0x36);
-  tft_write_data8(tft, 0x45);
-  tft_write_data8(tft, 0x06);
-  tft_write_data8(tft, 0x16);
-  tft_write_data8(tft, 0x37);
-  tft_write_data8(tft, 0x75);
-  tft_write_data8(tft, 0x77);
-  tft_write_data8(tft, 0x54);
-  tft_write_data8(tft, 0x0C);
-  tft_write_data8(tft, 0x00);
+	   tft_gpio_set(tft->ili9481.cs.port, tft->ili9481.cs.pin);
+	     tft_gpio_set(tft->ili9481.wr.port, tft->ili9481.wr.pin);
+	     tft_gpio_clear(tft->ili9481.cs.port, tft->ili9481.cs.pin);
+
+	     tft_gpio_clear(tft->ili9481.cs.port, tft->ili9481.cs.pin);
+
+	  // Unknown command F2
+	   tft_write_comm8(tft, 0xF2);
+	   tft_write_data8(tft, 0x18);
+	   tft_write_data8(tft, 0xA3);
+	   tft_write_data8(tft, 0x12);
+	   tft_write_data8(tft, 0x02);
+	   tft_write_data8(tft, 0xB2);
+	   tft_write_data8(tft, 0x12);
+	   tft_write_data8(tft, 0xFF);
+	   tft_write_data8(tft, 0x10);
+	   tft_write_data8(tft, 0x00);
+
+	    // Unknown command F8
+	   tft_write_comm8(tft, 0xF8);
+	   tft_write_data8(tft, 0x21);
+	   tft_write_data8(tft, 0x04);
+
+	    // Unknown command F9
+	   tft_write_comm8(tft, 0xF9);
+	   tft_write_data8(tft, 0x00);
+	   tft_write_data8(tft, 0x08);
+
+	   //Power Control 1
+	   tft_write_comm8(tft, 0xC0);
+	   tft_write_data8(tft, 0x0D);
+	   tft_write_data8(tft, 0x0D);
+
+	   //Power Control 2
+	   tft_write_comm8(tft, 0xC1);
+	   tft_write_data8(tft, 0x43);
+	   tft_write_data8(tft, 0x00);
+
+	   //Power Control 3
+	   tft_write_comm8(tft, 0xC2);
+	   tft_write_data8(tft, 0x00);
+
+	   //VCOM Control 1
+	   tft_write_comm8(tft, 0xC5);
+	   tft_write_data8(tft, 0x00);
+	   tft_write_data8(tft, 0x48);
+	   tft_write_data8(tft, 0x00);
+	   tft_write_data8(tft, 0x48);
+
+	   //Inversion Control
+	   tft_write_comm8(tft, 0xB4);
+	   tft_write_data8(tft, 0x00);
+
+	   //Display Function Control
+	   tft_write_comm8(tft, 0xB6);
+	   tft_write_data8(tft, 0x02);
+	   tft_write_data8(tft, 0x02);
+	   tft_write_data8(tft, 0x3B);
+
+	   //Posivite Gamma Control
+	   tft_write_comm8(tft, 0xE0);
+	   tft_write_data8(tft, 0x0F);
+	   tft_write_data8(tft, 0x21);
+	   tft_write_data8(tft, 0x1C);
+	   tft_write_data8(tft, 0x0B);
+	   tft_write_data8(tft, 0x0E);
+	   tft_write_data8(tft, 0x08);
+	   tft_write_data8(tft, 0x49);
+	   tft_write_data8(tft, 0x98);
+	   tft_write_data8(tft, 0x38);
+	   tft_write_data8(tft, 0x09);
+	   tft_write_data8(tft, 0x11);
+	   tft_write_data8(tft, 0x03);
+	   tft_write_data8(tft, 0x14);
+	   tft_write_data8(tft, 0x10);
+	   tft_write_data8(tft, 0x00);
+
+	   //Negative Gamma Control
+	   tft_write_comm8(tft, 0xE1);
+	   tft_write_data8(tft, 0x0F);
+	   tft_write_data8(tft, 0x2F);
+	   tft_write_data8(tft, 0x2B);
+	   tft_write_data8(tft, 0x0C);
+	   tft_write_data8(tft, 0x0E);
+	   tft_write_data8(tft, 0x06);
+	   tft_write_data8(tft, 0x47);
+	   tft_write_data8(tft, 0x76);
+	   tft_write_data8(tft, 0x37);
+	   tft_write_data8(tft, 0x07);
+	   tft_write_data8(tft, 0x11);
+	   tft_write_data8(tft, 0x04);
+	   tft_write_data8(tft, 0x23);
+	   tft_write_data8(tft, 0x1E);
+	   tft_write_data8(tft, 0x00);
+  }
+  else {
+	  //Frame Memory, interface [02 00 00 00]
+	   tft_write_comm8(tft, 0xB3);
+	   tft_write_data8(tft, 0x02);
+	   tft_write_data8(tft, 0x00);
+	   tft_write_data8(tft, 0x00);
+	   tft_write_data8(tft, 0x00);
+
+	   // Frame mode [00]
+	   tft_write_comm8(tft, 0xB4);
+	   tft_write_data8(tft, 0x00);
+
+	   // Set Power [00 43 18] x1.00, x6, x3
+	   tft_write_comm8(tft, 0xD0);
+	   tft_write_data8(tft, 0x07);
+	   tft_write_data8(tft, 0x42);
+	   tft_write_data8(tft, 0x17);
+
+	   // Set VCOM  [00 00 00] x0.72, x1.02
+	   tft_write_comm8(tft, 0xD1);
+	   tft_write_data8(tft, 0x00);
+	   tft_write_data8(tft, 0x07);
+	   tft_write_data8(tft, 0x10);
+
+	   // Set Power for Normal Mode [01 22]
+	   tft_write_comm8(tft, 0xD2);
+	   tft_write_data8(tft, 0x01);
+	   tft_write_data8(tft, 0x02);
+
+	   // Set Power for Partial Mode [01 22]
+	   tft_write_comm8(tft, 0xD3);
+	   tft_write_data8(tft, 0x01);
+	   tft_write_data8(tft, 0x02);
+
+	   // Set Power for Idle Mode [01 22]
+	   tft_write_comm8(tft, 0xD4);
+	   tft_write_data8(tft, 0x01);
+	   tft_write_data8(tft, 0x02);
+
+
+	  //Panel Driving BGR for 1581 [10 3B 00 02 11]
+	  tft_write_comm8(tft, 0xC0);
+	  tft_write_data8(tft, 0x12);
+	  tft_write_data8(tft, 0x3B);
+	  tft_write_data8(tft, 0x00);
+	  tft_write_data8(tft, 0x02);
+	  tft_write_data8(tft, 0x11);
+
+	  // Display Timing Normal [10 10 88]
+	  tft_write_comm8(tft, 0xC1);
+	  tft_write_data8(tft, 0x10);
+	  tft_write_data8(tft, 0x10);
+	  tft_write_data8(tft, 0x88);
+
+	  //Frame Rate [03]
+	  tft_write_comm8(tft, 0xC5);
+	  tft_write_data8(tft, 0x03);
+
+	  //Interface Control [02]
+	  tft_write_comm8(tft, 0xC6);
+	  tft_write_data8(tft, 0x02);
+	  tft_write_comm8(tft, 0xC8);
+	  tft_write_data8(tft, 0x00);
+	  tft_write_data8(tft, 0x32);
+	  tft_write_data8(tft, 0x36);
+	  tft_write_data8(tft, 0x45);
+	  tft_write_data8(tft, 0x06);
+	  tft_write_data8(tft, 0x16);
+	  tft_write_data8(tft, 0x37);
+	  tft_write_data8(tft, 0x75);
+	  tft_write_data8(tft, 0x77);
+	  tft_write_data8(tft, 0x54);
+	  tft_write_data8(tft, 0x0C);
+	  tft_write_data8(tft, 0x00);
+  }
 
   //Panel Control [00]
   tft_write_comm8(tft, 0xCC);
@@ -315,7 +564,7 @@ void tft_rotate(const tft_device_t *tft, tft_rotation_t rotation) {
 
 void tft_invert(const tft_device_t *tft, bool invert) {
   tft_gpio_clear(tft->ili9481.cs.port, tft->ili9481.cs.pin);
-  tft_write_comm8(tft, invert ? 0x21 : 20);
+  tft_write_comm8(tft, invert ? 0x21 : 0x20);
   tft_gpio_set(tft->ili9481.cs.port, tft->ili9481.cs.pin);
 
   tft_write_comm_data(tft, 0x61, invert);

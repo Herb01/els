@@ -156,7 +156,7 @@ void els_config_start(void) {
   config.encoder_curr = 0;
   els_encoder_reset();
   els_encoder_set_direction_debounce(100e3);
-  els_encoder_set_rotation_debounce(50e3);
+  els_encoder_set_rotation_debounce(1e3);
   els_config_menu_display_init();
   els_config_menu_display_header();
   els_config_menu_display_refresh();

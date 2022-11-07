@@ -29,7 +29,6 @@ static int16_t  encoder_multiplier = 1;
 // ISR
 //==============================================================================
 void ELS_I_ENCODER_ISR(void) {
-
 // ------------------------------------------------------
 // Begin: check EXTI flag, required for shared EXTI ISRs.
 // ------------------------------------------------------
@@ -40,21 +39,20 @@ void ELS_I_ENCODER_ISR(void) {
     // rotation debounce
     t2 = els_timer_elapsed_microseconds();
     if (t2 - t1 > rotation_debounce_us) {
-      // direction debounce
-      if (els_gpio_get(ELS_I_ENCODER_PORTB, ELS_I_ENCODER_PINB)) {
-        if (encoder_dir == -1 || (t2 - t1) > direction_debounce_us) {
-          encoder_dir = -1;
-          encoder_ticks--;
-        }
-      }
-      else {
-        // direction debounce
-        if (encoder_dir == 1 || (t2 - t1) > direction_debounce_us) {
-          encoder_dir = 1;
-          encoder_ticks++;
-        }
-      }
-      t1 = t2;
+    	int i = 0;
+    	// only rising edge
+    	while ((els_timer_elapsed_microseconds() < (t2 + 1000)) && (i++ < 10000));
+    	if (els_gpio_get(ELS_I_ENCODER_PORTA, ELS_I_ENCODER_PINA)) {
+    		if (els_gpio_get(ELS_I_ENCODER_PORTB, ELS_I_ENCODER_PINB)) {
+    			encoder_dir = -1;
+    			encoder_ticks--;
+    		}
+    		else {
+    			encoder_dir = 1;
+    			encoder_ticks++;
+    		}
+    		t1 = t2;
+    	}
     }
 // ------------------------------------------------------
 // End: check EXTI flag, required for shared EXTI ISRs.

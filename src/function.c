@@ -449,7 +449,7 @@ static void els_function_menu_display_refresh(void) {
   for (els_function_type_t f = els_function.function_sel; f < ELS_FUNCTION_MAX && f < els_function.function_sel + 5; f++) {
     y = y_start + row * 50;
     id = f - ELS_FUNCTION_CONFIG;
-    snprintf(text, sizeof(text), "%d", id);
+    snprintf(text, sizeof(text), "%d ", id );
 
     if (row == 0) {
       tft_filled_rectangle(&tft, 0, y, 480, 50, ILI9481_WHITE);

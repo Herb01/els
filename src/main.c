@@ -59,6 +59,13 @@ tft_device_t tft = {
 
 // els functions
 #include "function.h"
+//extern void initialise_monitor_handles();
+
+
+
+
+
+
 
 //==============================================================================
 // Helpers
@@ -67,22 +74,32 @@ static void els_screenshot(void) {
   for (size_t row = 0; row < 320; row++) {
     for (size_t col = 0; col < 480; col++) {
       tft_rgb_t color;
+#ifdef DEBUG
       tft_pixel_get(&tft, col, row, &color);
       printf("%02x%02x%02x", color.r, color.g, color.b);
       if ((col + 1) % 20 == 0)
         printf("\n");
+#endif
     }
   }
 }
+
+
+
 
 //==============================================================================
 // Main loop
 //==============================================================================
 int main(void) {
+
+//	 initialise_monitor_handles();
+
   els_nvic_setup();
   els_clock_setup();
   els_gpio_setup();
   els_usart_setup();
+
+  //els_gpio_set(ELS_X_DIR_PORT, ELS_X_DIR_PIN);
 
   printf("\nels v0.1.0 - build %s %s\n", GIT_SHA, BUILD_TS);
 
@@ -93,6 +110,12 @@ int main(void) {
   els_encoder_setup();
   els_encoder_start();
   els_keypad_setup();
+
+  // Reset Keyboard
+  els_ps2_write(true);
+   while(getCurBits() < 10) {
+   }
+
 
   // IMPORTANT: needs to happen as late as possible.
   els_delay_setup();
@@ -108,9 +131,10 @@ int main(void) {
 
   // setup display
   tft_init(&tft);
-  tft_invert(&tft, true);
-  //tft_rotate(&tft, ROTATE_90);
-  tft_rotate(&tft, ROTATE_270);
+  tft_invert(&tft, false);
+  //tft_invert(&tft, true);
+  tft_rotate(&tft, ROTATE_90);
+  //tft_rotate(&tft, ROTATE_270);
 
   // functions manager, needs to be called after config read.
   els_function_init();

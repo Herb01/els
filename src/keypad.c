@@ -42,42 +42,70 @@ volatile uint8_t bytes = 0;
 // 4. a stop bit (always high)
 //
 //------------------------------------------------------------------------------
+uint8_t curbit = 0;
 void ELS_KEYPAD_ISR(void) {
 #if ELS_KEYPAD_CLK_PIN > GPIO4
   if (exti_get_flag_status(ELS_KEYPAD_EXTI)) {
 #endif
 
   exti_reset_request(ELS_KEYPAD_EXTI);
-  if (bits > 0 && bits < 9) {
-    byte >>= 1;
-    els_delay_microseconds(10);
-    if (gpio_get(ELS_KEYPAD_DAT_PORT, ELS_KEYPAD_DAT_PIN))
-      byte |= 0x80;
+  if (curbit < 10) {
+	  static uint8_t writeByte = 0xff;
+	  static uint8_t parity = 0, ack;
+
+	  if (curbit < 8){
+		  if (writeByte & 1) {
+			  parity ^= 1;
+			  els_gpio_set(ELS_KEYPAD_DAT_PORT, ELS_KEYPAD_DAT_PIN);
+		  }
+		  else {
+			  els_gpio_clear(ELS_KEYPAD_DAT_PORT, ELS_KEYPAD_DAT_PIN);
+		  }
+		  writeByte >>= 1;
+	  } else if (curbit == 8) { // parity
+		  if (parity)
+			  els_gpio_clear(ELS_KEYPAD_DAT_PORT, ELS_KEYPAD_DAT_PIN);
+		  else
+			  els_gpio_set(ELS_KEYPAD_DAT_PORT, ELS_KEYPAD_DAT_PIN);
+	  } else if (curbit == 9) { // time to let go
+		  els_ps2_write(false);
+	  }
+	  curbit++;
   }
-
-  // D-8203 PS/2 keypad
-  //
-  // https://www.aliexpress.com/item/1005002340320709.html
-  //
-  // make & break codes come in a triplet, which is non-compliant for the keypad.
-  //
-  // 1. press => scan code, 0xf0
-  // 2. release => scan code
-  if (bits++ == 10) {
-    bytes++;
-    if (bytes > 2) {
-      bytes = 0;
-      ringbuffer_putc(&ringbuffer, byte);
+  else {
+    if (bits > 0 && bits < 9) {
+      byte >>= 1;
+      els_delay_microseconds(10);
+      if (gpio_get(ELS_KEYPAD_DAT_PORT, ELS_KEYPAD_DAT_PIN))
+        byte |= 0x80;
     }
 
-    // ignore reset & power-on ack.
-    if (byte == 0xaa) {
-      printf("kp ok\n");
-      bytes = 0;
-    }
+    // D-8203 PS/2 keypad
+    //
+    // https://www.aliexpress.com/item/1005002340320709.html
+    //
+    // make & break codes come in a triplet, which is non-compliant for the keypad.
+    //
+    // 1. press => scan code, 0xf0
+    // 2. release => scan code
 
-    // process next byte.
-    byte = bits = 0;
+    if (bits++ == 10) {
+    	if (byte != 0xc0) { // 0xc0 is used for extended key codes
+    		bytes++;
+    		if (bytes > 2) {
+    			bytes = 0;
+    			ringbuffer_putc(&ringbuffer, byte);
+    		}
+
+    		// ignore reset & power-on ack.
+    		if (byte == 0xaa) {
+    			printf("kp ok\n");
+    			bytes = 0;
+    		}
+    	}
+      // process next byte.
+       byte = bits = 0;
+    }
   }
 
 #if ELS_KEYPAD_CLK_PIN > GPIO4
@@ -92,8 +120,8 @@ void els_keypad_setup(void) {
   ringbuffer_init(&ringbuffer, sizeof(buffer), buffer);
 
   // PS/2 keypad.
-  gpio_mode_setup(ELS_KEYPAD_CLK_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, ELS_KEYPAD_CLK_PIN);
-  gpio_mode_setup(ELS_KEYPAD_DAT_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, ELS_KEYPAD_DAT_PIN);
+  gpio_mode_setup(ELS_KEYPAD_CLK_PORT, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, ELS_KEYPAD_CLK_PIN);
+  gpio_mode_setup(ELS_KEYPAD_DAT_PORT, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, ELS_KEYPAD_DAT_PIN);
 
   exti_select_source(ELS_KEYPAD_EXTI, ELS_KEYPAD_CLK_PORT);
   exti_set_trigger(ELS_KEYPAD_EXTI, EXTI_TRIGGER_FALLING);
@@ -102,6 +130,21 @@ void els_keypad_setup(void) {
   nvic_set_priority(ELS_KEYPAD_IRQ, 4);
   nvic_enable_irq(ELS_KEYPAD_IRQ);
 }
+
+uint8_t getCurBits(void) {
+	return curbit;
+}
+
+void els_ps2_write(bool writemode) {
+	if (writemode) {
+		gpio_mode_setup(ELS_KEYPAD_DAT_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, ELS_KEYPAD_DAT_PIN);
+		els_gpio_clear(ELS_KEYPAD_DAT_PORT, ELS_KEYPAD_DAT_PIN);
+	}
+	else
+		gpio_mode_setup(ELS_KEYPAD_DAT_PORT, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, ELS_KEYPAD_DAT_PIN);
+}
+
+
 
 void els_keypad_lock(void) {
   locked = true;
@@ -140,8 +183,9 @@ int els_keypad_read(void) {
 
 int els_keypad_peek(void) {
   uint8_t data;
-  if (ringbuffer_peek(&ringbuffer, &data))
+  if (ringbuffer_peek(&ringbuffer, &data)) {
     return data;
+  }
   else
     return ELS_KEY_EOF;
 }
