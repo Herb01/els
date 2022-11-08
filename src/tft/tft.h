@@ -24,7 +24,7 @@ extern "C" {
 #define ILI9481_CYAN      (tft_rgb_t){.g = ILI9481_GMAX, .b = ILI9481_BMAX}
 #define ILI9481_MAGENTA   (tft_rgb_t){.r = ILI9481_RMAX, .b = ILI9481_BMAX}
 #define ILI9481_WHITE     (tft_rgb_t){.r = ILI9481_RMAX, .g = ILI9481_GMAX, .b = ILI9481_BMAX}
-#define ILI9481_ORANGE    (tft_rgb_t){.r = ILI9481_BMAX, .g = 20}
+#define ILI9481_ORANGE    (tft_rgb_t){.r = ILI9481_RMAX, .g = 20}
 #define ILI9481_BLACK     (tft_rgb_t){.r = 0,  .g = 0, .b = 0}
 #define ILI9481_CERULEAN  (tft_rgb_t){.r = 0,  .g = 30, .b = 20}
 #define ILI9481_DIANNE    (tft_rgb_t){.r = 2,  .g = 18, .b = 12}
@@ -35,6 +35,10 @@ extern "C" {
 #define ILI9481_TURF      (tft_rgb_t){.r = 5,  .g = 13, .b = 3}
 #define ILI9481_BLUE1     (tft_rgb_t){.r = 0,  .g = 4,  .b = 5}
 #define ILI9481_BLUE2     (tft_rgb_t){.r = 0,  .g = 16, .b = 8}
+
+#define ILI9481_BGCOLOR1  (tft_rgb_t){.r = 10, .g = 40, .b = 30}
+#define ILI9481_BGCOLOR2  (tft_rgb_t){.r = 4,  .g = 30, .b = 8}
+#define ILI9481_BGCOLOR3  (tft_rgb_t){.r = 27, .g = 10}
 
 typedef struct {
   uint32_t port;
@@ -92,6 +96,12 @@ void tft_filled_triangle(const tft_device_t*,
   uint16_t x1, uint16_t y1,
   uint16_t x2, uint16_t y2,
   uint16_t x3, uint16_t y3,
+  tft_rgb_t color);
+
+// draws 3° arc segments.
+void tft_filled_arc(const tft_device_t *tft,
+  uint16_t x, uint16_t y, uint16_t rx, uint16_t ry,
+  uint16_t start_angle, uint16_t segments, uint16_t width,
   tft_rgb_t color);
 
 // ------------------------------------------------------------------------------------------------------------------

@@ -30,12 +30,14 @@ extern "C" {
 //=============================================================================
 // Z-Axis Pins
 //=============================================================================
+
 #define ELS_Z_ENA_PORT        GPIOB
 #define ELS_Z_ENA_PIN         GPIO13
 #define ELS_Z_DIR_PORT        GPIOB
 #define ELS_Z_DIR_PIN         GPIO14
 #define ELS_Z_PUL_PORT        GPIOB
 #define ELS_Z_PUL_PIN         GPIO15
+
 #define ELS_Z_ENA_ACTIVE_LOW  1
 
 //=============================================================================
@@ -73,9 +75,9 @@ extern "C" {
 // ----------------------------------------------------------------------------
 // Settings for threading module that uses interrupts to keep track of spindle.
 // ----------------------------------------------------------------------------
-// Interrupt counts on rise & fall, increasing resolution.
+// Interrupt counts on rise
 //
-#define ELS_S_ENCODER2_PPR    (ELS_S_ENCODER_PPR * 2)
+#define ELS_S_ENCODER2_PPR    (ELS_S_ENCODER_PPR)
 #define ELS_S_ENCODER2_PORTA  GPIOB
 #define ELS_S_ENCODER2_PINA   GPIO3
 #define ELS_S_ENCODER2_PORTB  GPIOB
@@ -121,31 +123,31 @@ extern "C" {
 // PS/2 keypad scancodes, update if the keypad changes.
 //-----------------------------------------------------------------------------
 #define ELS_KEY_EOF           -1
-#define ELS_KEY_OK            0x25
-#define ELS_KEY_EXIT          0x26
-#define ELS_KEY_SET_FEED      0x24
-#define ELS_KEY_REV_FEED      0x2b
+#define ELS_KEY_OK            0xb4
+#define ELS_KEY_EXIT          0xf2
+#define ELS_KEY_SET_FEED      0xd8
+#define ELS_KEY_REV_FEED      0xea
 
 // basic functions that are manually driven on x-axis
-#define ELS_KEY_FUN_TURN      0x34
-#define ELS_KEY_FUN_THREAD    0x33
+#define ELS_KEY_FUN_TURN      0xee
+#define ELS_KEY_FUN_THREAD    0x94
 
 // selection menu for additional functions
-#define ELS_KEY_SETTINGS      0x1c
-#define ELS_KEY_FUN_SELECT    0x32
-#define ELS_KEY_FUN_F1        0x21
-#define ELS_KEY_FUN_F2        0x23
+#define ELS_KEY_SETTINGS      0xf8
+#define ELS_KEY_FUN_SELECT    0xf6
+#define ELS_KEY_FUN_F1        0xfa
+#define ELS_KEY_FUN_F2        0xd6
 
-#define ELS_KEY_SET_ZX        0x43
+#define ELS_KEY_SET_ZX        0xe6
 
-#define ELS_KEY_SET_ZX_ORI    0x3b
-#define ELS_KEY_SET_ZX_MIN    0x42
-#define ELS_KEY_SET_ZX_MAX    0x4b
-#define ELS_KEY_JOG_ZX_MIN    0x2e
-#define ELS_KEY_JOG_ZX_MAX    0x36
+#define ELS_KEY_SET_ZX_ORI    0xe8
+#define ELS_KEY_SET_ZX_MIN    0xd2
+#define ELS_KEY_SET_ZX_MAX    0xe4
+#define ELS_KEY_JOG_ZX_MIN    0xf4
+#define ELS_KEY_JOG_ZX_MAX    0xe0
 
-#define ELS_KEY_LOCK          0x16
-#define ELS_KEY_UNLOCK        0x1e
+#define ELS_KEY_LOCK          0xe2
+#define ELS_KEY_ENC_MULT      0xcc
 
 
 //-----------------------------------------------------------------------------

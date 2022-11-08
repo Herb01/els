@@ -23,6 +23,8 @@
 #include "taper_int.h"
 #include "convex_ext_r.h"
 #include "convex_ext_l.h"
+#include "concave_ext_r.h"
+#include "knurling.h"
 
 #include "tft/tft.h"
 #include "tft/fonts/fonts.h"
@@ -50,33 +52,39 @@ typedef enum {
   ELS_FUNCTION_BORE_DIM_1   = 5,
   ELS_FUNCTION_BORE_DIM_2   = 6,
 
+  // knurling
+  ELS_FUNCTION_KNURLING     = 7,
+
   // external thread given length and pitch.
-  ELS_FUNCTION_THREAD_EXT   = 7,
+  ELS_FUNCTION_THREAD_EXT   = 8,
   // internal thread given length and pitch.
-  ELS_FUNCTION_THREAD_INT   = 8,
+  ELS_FUNCTION_THREAD_INT   = 9,
 
   // turn stock to an external taper d & l
-  ELS_FUNCTION_TAPER_EXT_1  = 9,
-  ELS_FUNCTION_TAPER_EXT_2  = 10,
+  ELS_FUNCTION_TAPER_EXT_1  = 10,
+  ELS_FUNCTION_TAPER_EXT_2  = 11,
 
   // turn stock to an internal taper d & l
-  ELS_FUNCTION_TAPER_INT    = 11,
+  ELS_FUNCTION_TAPER_INT    = 12,
 
   // turn external convex radius right (cw) and left (ccw) approach.
-  ELS_FUNCTION_CONVEX_EXT_1 = 12,
-  ELS_FUNCTION_CONVEX_EXT_2 = 13,
+  ELS_FUNCTION_CONVEX_EXT_1 = 13,
+  ELS_FUNCTION_CONVEX_EXT_2 = 14,
 
   // turn external concave radius right (cw) and left (ccw) approach.
-  ELS_FUNCTION_CONKAV_EXT_1 = 14,
-  ELS_FUNCTION_CONKAV_EXT_2 = 15,
+  ELS_FUNCTION_CONKAV_EXT_1 = 15,
+  ELS_FUNCTION_CONKAV_EXT_2 = 16,
+
+  // internal concave pockets
+  ELS_FUNCTION_CONKAV_INT   = 17,
 
   // rounded groove
-  ELS_FUNCTION_GROOVE_RND   = 16,
+  ELS_FUNCTION_GROOVE_RND   = 18,
   // straight groove
-  ELS_FUNCTION_GROOVE_STD   = 17,
+  ELS_FUNCTION_GROOVE_STD   = 19,
 
   // max
-  ELS_FUNCTION_MAX          = 18,
+  ELS_FUNCTION_MAX          = 20,
 } els_function_type_t;
 
 static char *function_type_labels[] = {
@@ -87,6 +95,7 @@ static char *function_type_labels[] = {
   "TURNING",
   "BORING - POCKET",
   "BORING - HOLE",
+  "KNURLING",
   "THREAD EXTERNAL",
   "THREAD INTERNAL",
   "TAPER EXTERNAL - R",
@@ -96,6 +105,7 @@ static char *function_type_labels[] = {
   "CONVEX EXTERNAL - L",
   "CONCAVE EXTERNAL - R",
   "CONCAVE EXTERNAL - L",
+  "CONCAVE INTERNAL",
   "GROOVE ROUNDED",
   "GROOVE STANDARD"
 };
@@ -202,6 +212,13 @@ static const struct {
     .busy_cb = els_bore_hole_busy
   },
   {
+    .setup_cb = els_knurling_setup,
+    .start_cb = els_knurling_start,
+    .update_cb = els_knurling_update,
+    .stop_cb = els_knurling_stop,
+    .busy_cb = els_knurling_busy
+  },
+  {
     .setup_cb = els_threading_ext_setup,
     .start_cb = els_threading_ext_start,
     .update_cb = els_threading_ext_update,
@@ -249,6 +266,13 @@ static const struct {
     .update_cb = els_convex_ext_l_update,
     .stop_cb = els_convex_ext_l_stop,
     .busy_cb = els_convex_ext_l_busy
+  },
+  {
+    .setup_cb = els_concave_ext_r_setup,
+    .start_cb = els_concave_ext_r_start,
+    .update_cb = els_concave_ext_r_update,
+    .stop_cb = els_concave_ext_r_stop,
+    .busy_cb = els_concave_ext_r_busy
   }
 };
 
@@ -262,17 +286,19 @@ void els_function_init(void) {
       els_function_registry[i].setup_cb();
   }
 
-  els_function.function_sel = ELS_FUNCTION_CONVEX_EXT_1;
-  els_function_start(ELS_FUNCTION_CONVEX_EXT_1);
+  els_function.function_sel = ELS_FUNCTION_TURN_DIM;
+  els_function_start(ELS_FUNCTION_TURN_DIM);
 }
 
 void els_function_update(void) {
   switch (els_keypad_peek()) {
     case ELS_KEY_FUN_TURN:
+      els_function.function_sel = ELS_FUNCTION_TURN_DIM;
       els_function_change(ELS_FUNCTION_TURN_DIM);
       els_keypad_flush();
       break;
     case ELS_KEY_FUN_THREAD:
+      els_function.function_sel = ELS_FUNCTION_THREAD_EXT;
       els_function_change(ELS_FUNCTION_THREAD_EXT);
       els_keypad_flush();
       break;
@@ -350,7 +376,7 @@ static void els_function_menu_start(void) {
 }
 
 static void els_function_menu_stop(void) {
-  els_encoder_set_rotation_debounce(10e3);
+  els_encoder_set_rotation_debounce(25e3);
   els_encoder_set_direction_debounce(100e3);
 }
 
@@ -423,7 +449,7 @@ static void els_function_menu_display_refresh(void) {
   for (els_function_type_t f = els_function.function_sel; f < ELS_FUNCTION_MAX && f < els_function.function_sel + 5; f++) {
     y = y_start + row * 50;
     id = f - ELS_FUNCTION_CONFIG;
-    snprintf(text, sizeof(text), "%d", id);
+    snprintf(text, sizeof(text), "%d ", id );
 
     if (row == 0) {
       tft_filled_rectangle(&tft, 0, y, 480, 50, ILI9481_WHITE);

@@ -15,6 +15,12 @@ git clone https://github.com/libopencm3/libopencm3
 export OPENCM3_DIR=$PWD/libopencm3
 
 cd libopencm3
+
+For Windows:
+Select the folder where LibOpenCM3 was loaded by cd libopencm3
+Create the missing files with a python program. Enter python ./scripts/irq2nvic_h ./include/libopencm3/stm32/f4/irq.json
+Compile STM32 F4 library with mingw32-make TARGETS=stm32/f4
+
 make
 
 cd ../
