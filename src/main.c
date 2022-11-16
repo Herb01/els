@@ -101,7 +101,7 @@ int main(void) {
 
   //els_gpio_set(ELS_X_DIR_PORT, ELS_X_DIR_PIN);
 
-  printf("\nels v0.1.0 - build %s \n", GIT_SHA);
+  printf("\nels v0.1.0 - build %s\n", GIT_SHA);
 
   // core
   els_timer_setup();
