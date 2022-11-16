@@ -36,10 +36,7 @@
 #include "concave_ext_r.h"
 #include "utils.h"
 
-#define ELS_Z_JOG_MM_S  8
-#define ELS_X_JOG_MM_S  4
-
-#define PRECISION       (1e-2)
+#define PRECISION 1e-2
 //==============================================================================
 // Externs
 //==============================================================================
@@ -113,9 +110,6 @@ static const char *op_labels[] = {
 static struct {
   int32_t  feed_um;
   double   feed_mm_s;
-
-  // not supported
-  bool     feed_reverse;
 
   int32_t  depth_of_cut_um;
 
@@ -569,6 +563,12 @@ static void els_concave_ext_r_turn(void) {
       break;
     case ELS_CONCAVE_EXT_OP_READY:
       els_concave_ext_r.op_state = ELS_CONCAVE_EXT_OP_MOVEZ0;
+
+      if (els_config->z_closed_loop)
+        els_stepper->zpos = els_dro.zpos_um / 1000.0;
+      if (els_config->x_closed_loop)
+        els_stepper->xpos = els_dro.xpos_um / 1000.0;
+
       break;
     case ELS_CONCAVE_EXT_OP_MOVEZ0:
       if (els_stepper->zbusy)
@@ -620,20 +620,21 @@ static void els_concave_ext_r_turn(void) {
 
       els_concave_ext_r.xcurr = els_stepper->xpos;
       els_concave_ext_r.op_state = ELS_CONCAVE_EXT_OP_TURNING;
-      if (els_concave_ext_r.spring_pass_count > 0) {
+
+      if (els_stepper->xpos < 0) {
+        double feed = (els_concave_ext_r.spring_pass_count > 0 ?
+                        els_concave_ext_r.feed_mm_s / 4.0 :
+                        els_concave_ext_r.feed_mm_s);
+
         els_stepper_move_arc_q4_ccw(
           els_concave_ext_r.arc_center_z,
           els_concave_ext_r.arc_center_x,
           els_concave_ext_r.radius,
-          els_concave_ext_r.depth,
-          els_concave_ext_r.feed_mm_s / 4.0
+          -els_stepper->xpos,
+          feed
         );
       }
-      else {
-        ztarget = -sqrt(SQR(els_concave_ext_r.radius) - SQR(els_stepper->xpos - els_concave_ext_r.arc_center_x)) +
-                   els_concave_ext_r.arc_center_z;
-        els_stepper_move_z(ztarget - els_stepper->zpos + 0.25, els_concave_ext_r.feed_mm_s);
-      }
+
       break;
     case ELS_CONCAVE_EXT_OP_TURNING:
       if (els_stepper->xbusy || els_stepper->zbusy)
@@ -766,6 +767,16 @@ void els_concave_ext_r_set_radius(void) {
         els_concave_ext_r.encoder_pos = encoder_curr;
         if (els_concave_ext_r.depth > els_concave_ext_r.radius)
           els_concave_ext_r.depth = els_concave_ext_r.radius;
+        if (els_concave_ext_r.length > els_concave_ext_r.radius)
+          els_concave_ext_r.length = els_concave_ext_r.radius;
+
+        // re-adjust length.
+        els_concave_ext_r_calculate_arc();
+        if (els_concave_ext_r.arc_center_z < 0) {
+          els_concave_ext_r.length -= fabs(els_concave_ext_r.arc_center_z);
+          els_concave_ext_r_calculate_arc();
+        }
+
         els_concave_ext_r_display_setting();
       }
       break;
@@ -826,6 +837,14 @@ void els_concave_ext_r_set_length(void) {
         else
           els_concave_ext_r.length += delta;
         els_concave_ext_r.encoder_pos = encoder_curr;
+
+        // re-adjust length.
+        els_concave_ext_r_calculate_arc();
+        if (els_concave_ext_r.arc_center_z < 0) {
+          els_concave_ext_r.length -= fabs(els_concave_ext_r.arc_center_z);
+          els_concave_ext_r_calculate_arc();
+        }
+
         els_concave_ext_r_display_setting();
       }
       break;
@@ -894,7 +913,7 @@ static void els_concave_ext_r_zjog(void) {
   if (els_concave_ext_r.encoder_pos != encoder_curr) {
     delta = (encoder_curr - els_concave_ext_r.encoder_pos) * (0.01 * els_concave_ext_r.encoder_multiplier);
     els_concave_ext_r.encoder_pos = encoder_curr;
-    els_stepper_move_z(delta, ELS_Z_JOG_MM_S);
+    els_stepper_move_z(delta, els_config->z_jog_mm_s);
   }
 }
 
@@ -906,7 +925,7 @@ static void els_concave_ext_r_xjog(void) {
   if (els_concave_ext_r.encoder_pos != encoder_curr) {
     delta = (encoder_curr - els_concave_ext_r.encoder_pos) * (0.01 * els_concave_ext_r.encoder_multiplier);
     els_concave_ext_r.encoder_pos = encoder_curr;
-    els_stepper_move_x(delta, ELS_X_JOG_MM_S);
+    els_stepper_move_x(delta, els_config->x_jog_mm_s);
   }
 }
 

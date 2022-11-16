@@ -36,10 +36,8 @@
 #include "bore_hole.h"
 #include "utils.h"
 
-#define ELS_Z_JOG_MM_S  8
-#define ELS_X_JOG_MM_S  4
-
-#define PRECISION       (1e-2)
+#define PRECISION       1e-2
+#define BACKOFF_DEPTH   0.2
 //==============================================================================
 // Externs
 //==============================================================================
@@ -137,6 +135,9 @@ static struct {
 
   // operation state
   els_bore_hole_op_state_t op_state;
+
+  // saved x pos
+  double xpos_prev;
 
   // dro
   bool show_dro;
@@ -524,6 +525,12 @@ static void els_bore_hole_turn(void) {
       break;
     case ELS_BORE_HOLE_OP_READY:
       els_bore_hole.op_state = ELS_BORE_HOLE_OP_MOVEZ0;
+
+      if (els_config->z_closed_loop)
+        els_stepper->zpos = els_dro.zpos_um / 1000.0;
+      if (els_config->x_closed_loop)
+        els_stepper->xpos = els_dro.xpos_um / 1000.0;
+
       break;
     case ELS_BORE_HOLE_OP_MOVEZ0:
       if (els_stepper->zbusy)
@@ -546,7 +553,7 @@ static void els_bore_hole_turn(void) {
       break;
     case ELS_BORE_HOLE_OP_START:
       // initial move.
-      els_stepper_move_z(-els_bore_hole.depth, els_bore_hole.feed_mm_s);
+      els_stepper_move_z_no_accel(-els_bore_hole.depth, els_bore_hole.feed_mm_s);
       els_bore_hole.op_state = ELS_BORE_HOLE_OP_ATZ0;
       break;
     case ELS_BORE_HOLE_OP_ATZ0:
@@ -554,21 +561,23 @@ static void els_bore_hole_turn(void) {
         break;
 
       // backoff
-      els_stepper_move_x(-1, els_config->x_retract_jog_mm_s);
+      els_bore_hole.xpos_prev = els_stepper->xpos;
+      els_stepper_move_x(-BACKOFF_DEPTH, els_config->x_retract_jog_mm_s);
       els_bore_hole.op_state = ELS_BORE_HOLE_OP_ATZL;
       break;
     case ELS_BORE_HOLE_OP_ATZL:
       if (els_stepper->xbusy)
         break;
       // back to Z=0
-      els_stepper_move_z(els_bore_hole.depth, els_config->z_retract_jog_mm_s);
+      els_stepper_move_z(0 - els_stepper->zpos, els_config->z_retract_jog_mm_s);
       els_bore_hole.op_state = ELS_BORE_HOLE_OP_ATZLXM;
       break;
     case ELS_BORE_HOLE_OP_ATZLXM:
       if (els_stepper->zbusy)
         break;
 
-      els_stepper_move_x(1, els_config->x_retract_jog_mm_s);
+      // move to previous x postion before backoff
+      els_stepper_move_x(els_bore_hole.xpos_prev - els_stepper->xpos, els_config->x_retract_jog_mm_s);
       els_bore_hole.op_state = ELS_BORE_HOLE_OP_ATZ0XM;
       break;
     case ELS_BORE_HOLE_OP_ATZ0XM:
@@ -588,7 +597,7 @@ static void els_bore_hole_turn(void) {
       else {
         // spring pass
         els_bore_hole.op_state = ELS_BORE_HOLE_OP_SPRING;
-        els_stepper_move_z(0 - els_stepper->zpos, els_bore_hole.feed_mm_s / 2.0);
+        els_stepper_move_z_no_accel(0 - els_stepper->zpos, els_bore_hole.feed_mm_s / 2.0);
       }
       break;
     case ELS_BORE_HOLE_OP_FEED_IN:
@@ -596,7 +605,7 @@ static void els_bore_hole_turn(void) {
         break;
 
       els_bore_hole.op_state = ELS_BORE_HOLE_OP_ATZ0;
-      els_stepper_move_z(-els_bore_hole.depth, els_bore_hole.feed_mm_s);
+      els_stepper_move_z_no_accel(-els_bore_hole.depth, els_bore_hole.feed_mm_s);
       break;
     case ELS_BORE_HOLE_OP_SPRING:
       if (els_stepper->zbusy)
@@ -801,7 +810,7 @@ static void els_bore_hole_zjog(void) {
   if (els_bore_hole.encoder_pos != encoder_curr) {
     delta = (encoder_curr - els_bore_hole.encoder_pos) * (0.01 * els_bore_hole.encoder_multiplier);
     els_bore_hole.encoder_pos = encoder_curr;
-    els_stepper_move_z(delta, ELS_Z_JOG_MM_S);
+    els_stepper_move_z(delta, els_config->z_jog_mm_s);
   }
 }
 
@@ -813,6 +822,6 @@ static void els_bore_hole_xjog(void) {
   if (els_bore_hole.encoder_pos != encoder_curr) {
     delta = (encoder_curr - els_bore_hole.encoder_pos) * (0.01 * els_bore_hole.encoder_multiplier);
     els_bore_hole.encoder_pos = encoder_curr;
-    els_stepper_move_x(delta, ELS_X_JOG_MM_S);
+    els_stepper_move_x(delta, els_config->x_jog_mm_s);
   }
 }

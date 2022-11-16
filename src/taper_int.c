@@ -36,10 +36,7 @@
 #include "taper_int.h"
 #include "utils.h"
 
-#define ELS_Z_JOG_MM_S  8
-#define ELS_X_JOG_MM_S  4
-
-#define PRECISION       (1e-2)
+#define PRECISION 1e-2
 //==============================================================================
 // Externs
 //==============================================================================
@@ -552,6 +549,12 @@ static void els_taper_int_turn(void) {
       break;
     case ELS_TAPER_EXT_OP_READY:
       els_taper_int.op_state = ELS_TAPER_EXT_OP_MOVEZ0;
+
+      if (els_config->z_closed_loop)
+        els_stepper->zpos = els_dro.zpos_um / 1000.0;
+      if (els_config->x_closed_loop)
+        els_stepper->xpos = els_dro.xpos_um / 1000.0;
+
       break;
     case ELS_TAPER_EXT_OP_MOVEZ0:
       if (els_stepper->zbusy)
@@ -563,6 +566,11 @@ static void els_taper_int_turn(void) {
         els_taper_int.op_state = ELS_TAPER_EXT_OP_MOVEX0;
       break;
     case ELS_TAPER_EXT_OP_MOVEX0:
+      if (els_taper_int.only_spring_pass) {
+        els_taper_int.op_state = ELS_TAPER_EXT_OP_START;
+        break;
+      }
+
       if (els_stepper->xbusy)
         break;
 
@@ -845,7 +853,7 @@ static void els_taper_int_zjog(void) {
   if (els_taper_int.encoder_pos != encoder_curr) {
     delta = (encoder_curr - els_taper_int.encoder_pos) * 0.01 * els_taper_int.encoder_multiplier;
     els_taper_int.encoder_pos = encoder_curr;
-    els_stepper_move_z(delta, ELS_Z_JOG_MM_S);
+    els_stepper_move_z(delta, els_config->z_jog_mm_s);
   }
 }
 
@@ -860,6 +868,6 @@ static void els_taper_int_xjog(void) {
     // ----------------------------------------------------------------------------------
     delta = (encoder_curr - els_taper_int.encoder_pos) * 0.01 * els_taper_int.encoder_multiplier;
     els_taper_int.encoder_pos = encoder_curr;
-    els_stepper_move_x(delta, ELS_X_JOG_MM_S);
+    els_stepper_move_x(delta, els_config->x_jog_mm_s);
   }
 }

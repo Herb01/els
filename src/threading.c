@@ -42,6 +42,9 @@
 
 #define ELS_THREADING_Z_JOG_FEED_UM 6000
 
+#define ELS_THREADING_PITCH_MIN_UM  100
+#define ELS_THREADING_PITCH_MAX_UM  5000
+
 //==============================================================================
 // Externs
 //==============================================================================
@@ -224,17 +227,17 @@ static void els_threading_set_max(void);
 static void els_threading_set_zaxes(void);
 static void els_threading_set_xaxes(void);
 
-static void els_threading_recalulate_pitch_ratio(void);
+static void els_threading_recalculate_pitch_ratio(void);
 
 static void els_threading_configure_gpio(void);
 static void els_threading_configure_timer(void);
 
-static void els_threading_timer_isr(void);
 static void els_threading_timer_update(int32_t feed_um);
 static void els_threading_timer_start(void);
 static void els_threading_timer_stop(void);
 
-static void els_threading_encoder_isr(void);
+static void els_threading_timer_isr(void) __attribute__ ((interrupt ("IRQ")));
+static void els_threading_encoder_isr(void) __attribute__ ((interrupt ("IRQ")));
 
 static void els_threading_keypad_process(void);
 
@@ -308,7 +311,7 @@ void els_threading_start(void) {
 
   els_threading_display_refresh();
 
-  els_threading_recalulate_pitch_ratio();
+  els_threading_recalculate_pitch_ratio();
 
   // spindle encoder
   nvic_set_priority(ELS_S_ENCODER2_IRQ, 4);
@@ -457,12 +460,16 @@ static void els_threading_display_pitch(void) {
   char text[32];
 
   if (els_threading.pitch_reverse)
-    tft_font_write_bg(&tft, 186, 102, "R", &noto_sans_mono_bold_26, ILI9481_GREEN, ILI9481_BLACK);
+    tft_font_write_bg(&tft, 220, 102, "R", &noto_sans_mono_bold_26, ILI9481_GREEN, ILI9481_BLACK);
   else
-    tft_filled_rectangle(&tft, 186, 110, 30, 30, ILI9481_BLACK);
+    tft_filled_rectangle(&tft, 220, 110, 30, 30, ILI9481_BLACK);
 
-  els_sprint_double2(text, sizeof(text), els_threading.pitch_um / 1000.0, "PITCH");
-  tft_font_write_bg(&tft, 249, 228, text, &noto_sans_mono_bold_26, ILI9481_WHITE, ILI9481_BLACK);
+  els_sprint_double13(text, sizeof(text), els_threading.pitch_um / 1000.0, "PITCH");
+  if (els_threading.state == ELS_THREADING_SET_PITCH)
+    tft_font_write_bg(&tft, 249, 228, text, &noto_sans_mono_bold_26, ILI9481_YELLOW, ILI9481_BLACK);
+  else
+    tft_font_write_bg(&tft, 249, 228, text, &noto_sans_mono_bold_26, ILI9481_WHITE, ILI9481_BLACK);
+
 
   if (els_threading.pitch_type == ELS_THREADING_PITCH_STD) {
     tft_filled_rectangle(&tft, 249, 200, 260, 25, ILI9481_BLACK);
@@ -484,7 +491,10 @@ static void els_threading_display_axes(void) {
   char text[32];
 
   els_sprint_double33(text, sizeof(text), els_threading.zpos, "Z");
-  tft_font_write_bg(&tft, 8, 102, text, &noto_sans_mono_bold_26, ILI9481_WHITE, ILI9481_BLACK);
+  if (els_threading.state & ELS_THREADING_SET_ZAXES)
+    tft_font_write_bg(&tft, 8, 102, text, &noto_sans_mono_bold_26, ILI9481_YELLOW, ILI9481_BLACK);
+  else
+    tft_font_write_bg(&tft, 8, 102, text, &noto_sans_mono_bold_26, ILI9481_WHITE, ILI9481_BLACK);
 
   els_sprint_double3(text, sizeof(text), els_threading.zmin, "MIN");
   if (els_threading.state == ELS_THREADING_SET_MIN)
@@ -596,8 +606,11 @@ static void els_threading_display_refresh(void) {
   snprintf(text, sizeof(text), "%04d", els_spindle_get_counter());
   tft_font_write_bg(&tft, 396, 52, text, &noto_sans_mono_bold_26, ILI9481_WHITE, ILI9481_BLACK);
 
-  els_sprint_double3(text, sizeof(text), els_threading.zpos, "Z");
-  tft_font_write_bg(&tft, 8, 102, text, &noto_sans_mono_bold_26, ILI9481_WHITE, ILI9481_BLACK);
+  els_sprint_double33(text, sizeof(text), els_threading.zpos, "Z");
+  if (els_threading.state & ELS_THREADING_SET_ZAXES)
+    tft_font_write_bg(&tft, 8, 102, text, &noto_sans_mono_bold_26, ILI9481_YELLOW, ILI9481_BLACK);
+  else
+    tft_font_write_bg(&tft, 8, 102, text, &noto_sans_mono_bold_26, ILI9481_WHITE, ILI9481_BLACK);
 
   els_sprint_double33(text, sizeof(text), (els_dro.zpos_um / 1000.0), "Z");
   tft_font_write_bg(&tft, 8, 228, text, &noto_sans_mono_bold_26, ILI9481_WHITE, ILI9481_BLACK);
@@ -625,6 +638,7 @@ static void els_threading_keypad_process(void) {
       els_threading.encoder_pos = 0;
       els_encoder_set_rotation_debounce(50e3);
       els_encoder_reset();
+      els_threading_display_pitch();
       break;
     case ELS_KEY_SET_ZX:
       if (els_threading.state & (ELS_THREADING_IDLE | ELS_THREADING_PAUSED)) {
@@ -693,7 +707,7 @@ static void els_threading_run(void) {
 // Function 2: pitch settings.
 // ----------------------------------------------------------------------------------
 //
-static void els_threading_recalulate_pitch_ratio(void) {
+static void els_threading_recalculate_pitch_ratio(void) {
   uint32_t n = (els_threading.pitch_um * els_config->z_pulses_per_mm) / 1000;
   uint32_t d = els_config->spindle_encoder_ppr;
 
@@ -712,6 +726,7 @@ static void els_threading_set_pitch(void) {
     case ELS_KEY_OK:
     case ELS_KEY_EXIT:
       els_threading.state = ELS_THREADING_IDLE;
+      els_threading_display_pitch();
       break;
     case ELS_KEY_SET_FEED:
       els_threading.pitch_type = (els_threading.pitch_type + 1) % 2;
@@ -739,14 +754,16 @@ static void els_threading_set_pitch(void) {
         }
         else {
           if (encoder_curr > els_threading.encoder_pos)
-            els_threading.pitch_um += 10;
+            els_threading.pitch_um = els_threading.pitch_um + els_threading.encoder_multiplier < ELS_THREADING_PITCH_MAX_UM ?
+              els_threading.pitch_um + els_threading.encoder_multiplier : ELS_THREADING_PITCH_MAX_UM;
           else
-            els_threading.pitch_um = els_threading.pitch_um >= 110 ? els_threading.pitch_um - 10 : 100;
+            els_threading.pitch_um = els_threading.pitch_um > els_threading.encoder_multiplier + ELS_THREADING_PITCH_MIN_UM ?
+              els_threading.pitch_um - els_threading.encoder_multiplier : ELS_THREADING_PITCH_MIN_UM;
         }
 
         els_threading.encoder_pos = encoder_curr;
         els_threading_display_pitch();
-        els_threading_recalulate_pitch_ratio();
+        els_threading_recalculate_pitch_ratio();
       }
       break;
   }
