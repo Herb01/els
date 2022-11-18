@@ -126,7 +126,7 @@ static void els_stepper_disable_z(void);
 static void els_stepper_timer_start(void);
 static void els_stepper_timer_stop(void);
 
-static void els_stepper_timer_isr(void) __attribute__ ((interrupt ("IRQ")));
+static void els_stepper_timer_isr(void);
 static void els_stepper_timer_x_update(uint32_t feed_um, bool accel);
 static void els_stepper_timer_z_update(uint32_t feed_um, bool accel);
 

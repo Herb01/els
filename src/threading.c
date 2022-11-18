@@ -236,8 +236,8 @@ static void els_threading_timer_update(int32_t feed_um);
 static void els_threading_timer_start(void);
 static void els_threading_timer_stop(void);
 
-static void els_threading_timer_isr(void) __attribute__ ((interrupt ("IRQ")));
-static void els_threading_encoder_isr(void) __attribute__ ((interrupt ("IRQ")));
+static void els_threading_timer_isr(void);
+static void els_threading_encoder_isr(void);
 
 static void els_threading_keypad_process(void);
 

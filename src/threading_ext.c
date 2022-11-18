@@ -285,7 +285,7 @@ static void els_threading_ext_recalculate_pitch_ratio(void);
 
 static void els_threading_ext_configure_gpio(void);
 
-static void els_threading_ext_encoder_isr(void) __attribute__ ((interrupt ("IRQ")));
+static void els_threading_ext_encoder_isr(void);
 
 static void els_threading_ext_keypad_process(void);
 

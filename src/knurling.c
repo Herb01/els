@@ -229,8 +229,8 @@ static void els_knurling_configure_gpio(void);
 static void els_knurling_timer_start(void);
 static void els_knurling_timer_stop(void);
 
-static void els_knurling_timer_isr(void) __attribute__ ((interrupt ("IRQ")));
-static void els_knurling_encoder_isr(void) __attribute__ ((interrupt ("IRQ")));
+static void els_knurling_timer_isr(void);
+static void els_knurling_encoder_isr(void);
 
 static void els_knurling_keypad_process(void);
 

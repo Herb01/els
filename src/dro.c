@@ -35,8 +35,8 @@ static void els_dro_configure_isr(void);
 //==============================================================================
 // ISR
 //==============================================================================
-static void els_dro_x_isr(void) __attribute__ ((interrupt ("IRQ")));
-static void els_dro_z_isr(void) __attribute__ ((interrupt ("IRQ")));
+static void els_dro_x_isr(void);
+static void els_dro_z_isr(void);
 
 //==============================================================================
 // API
