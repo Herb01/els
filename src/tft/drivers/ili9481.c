@@ -169,7 +169,8 @@ static uint16_t tft_readID(const tft_device_t *tft) {
     uint32_t ret32 = tft_read_register32(tft, 0x04);
     msb = ret32 >> 16;
     ret = ret32;
-    if (msb == 0xE3 && ret == 0x0000) return 0xE300; //reg(04) = [xx E3 00 00] BangGood
+    if (msb == 0xE3 && ret == 0x0000)
+    	return 0xE300; 		//reg(04) = [xx E3 00 00] BangGood
 //    if (msb == 0x38 && ret == 0x8000) //unknown [xx 38 80 00] with D3 = 0x1602
 
 //    if (msb == 0xFF && ret == 0xFFFF) //R61526 [xx FF FF FF]

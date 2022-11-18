@@ -113,8 +113,7 @@ int main(void) {
 
   // Reset Keyboard
   els_ps2_write(true);
-   while(getCurBits() < 10) {
-   }
+  while(getCurBits() < 10);
 
 
   // IMPORTANT: needs to happen as late as possible.
