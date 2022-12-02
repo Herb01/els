@@ -18,6 +18,7 @@ typedef struct {
 
 extern volatile els_dro_t els_dro;
 
+void hbm_dro_setup(void);
 void els_dro_setup(void);
 void els_dro_zero_x(void);
 void els_dro_zero_z(void);

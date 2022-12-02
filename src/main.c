@@ -84,7 +84,7 @@ static void els_screenshot(void) {
   }
 }
 
-
+#define USE_GLASS_RULER 0
 
 
 //==============================================================================
@@ -124,7 +124,12 @@ int main(void) {
   els_kv_setup();
   els_config_setup();
 
+#ifdef USE_GLASS_RULER
   els_dro_setup();
+#else
+  hbm_dro_setup();
+#endif
+
   els_stepper_setup();
   els_spindle_setup();
 
