@@ -49,12 +49,16 @@ static void hbm_dro_timer_isr(void) {
   static uint8_t TimeSlice = 0;
   static bool Pause = 0;
   static long TempRulerX = 0, TempRulerZ = 0;
+  static long OldRulerX = 0, OldRulerZ = 0;
 
   // Readout of rulers
   switch (TimeSlice++ & 0x03) // modulo 4
   {
   case 0:  // set clock high
-    if (!Pause) els_gpio_set(GPIOA, GPIO12); // clock high
+    if (!Pause) {
+    	els_gpio_set(GPIOA, GPIO12); // clock high
+    	els_gpio_set(GPIOB, GPIO5);
+    }
     break;
 
   case 1: // sample and clock low
@@ -65,6 +69,7 @@ static void hbm_dro_timer_isr(void) {
         else TempRulerZ &= ~0x80000000; // Clear MSB bit of result
       // Clearing the MSB is nescessary because of sign extend while shifting
       els_gpio_clear(GPIOA, GPIO12); // clock low
+      els_gpio_clear(GPIOB, GPIO5);
     }
     break;
 
@@ -80,12 +85,18 @@ static void hbm_dro_timer_isr(void) {
       RulerX = TempRulerX >> 10; // Final shift to get LSB right
       RulerZ = TempRulerZ >> 10;
       Pause = true;
+      if (abs(OldRulerX - RulerX) < 5) // Debouncing
+    	  els_dro.xpos_um = (RulerX * 10) - els_dro.xpos_zero;
+      if (abs(OldRulerZ - RulerZ) < 5)
+      els_dro.zpos_um = (RulerZ * 10) - els_dro.zpos_zero;
     }
-    if (TimeSlice == 200) {
+    if (TimeSlice >= 200) {
+      OldRulerX = RulerX;
+      OldRulerZ = RulerZ;
       TimeSlice = 0;
       TempRulerX = 0;
       TempRulerZ = 0;
-      Pause = false;  // Ftart again
+      Pause = false;  // Start again
     }
     break;
   }
@@ -111,10 +122,13 @@ void hbm_dro_setup(void) {
 //==============================================================================
 static void hbm_dro_configure_gpio(void) {
   gpio_mode_setup(GPIOA, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, GPIO11);
-  gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLUP, GPIO12);
+  els_gpio_mode_output(GPIOA, GPIO12); // clock low
 
   gpio_mode_setup(GPIOB, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, GPIO1);
-  gpio_mode_setup(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLUP, GPIO5);
+  els_gpio_mode_output(GPIOB, GPIO5);
+
+  els_gpio_clear(GPIOA, GPIO12); // clock low
+  els_gpio_clear(GPIOB, GPIO5);
 }
 
 static void hbm_dro_timer_setup(void) {
@@ -126,7 +140,7 @@ static void hbm_dro_timer_setup(void) {
 //rcc_apb1_frequency = 16.000.000;
 
   // Set prescalar to 1 us
-  timer_set_prescaler(HBM_DRO_TIMER, ((rcc_apb1_frequency * 2) / 90) - 1);
+  timer_set_prescaler(HBM_DRO_TIMER, 90 - 1);
 
   // keep running
   timer_disable_preload(HBM_DRO_TIMER);
@@ -136,7 +150,7 @@ static void hbm_dro_timer_setup(void) {
   timer_set_period(HBM_DRO_TIMER, HBM_DRO_TIMER_RELOAD);
 
   els_nvic_irq_set_handler(HBM_DRO_TIMER_IRQ, hbm_dro_timer_isr);
-  nvic_set_priority(HBM_DRO_TIMER_IRQ, 4);
+  nvic_set_priority(HBM_DRO_TIMER_IRQ, 3);
   nvic_enable_irq(HBM_DRO_TIMER_IRQ);
   timer_enable_update_event(HBM_DRO_TIMER);
 

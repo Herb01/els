@@ -143,24 +143,28 @@ extern "C" {
 #define ELS_KEY_SET_ZX_ORI    0xe8
 #define ELS_KEY_SET_ZX_MIN    0xd2
 #define ELS_KEY_SET_ZX_MAX    0xe4
-#define ELS_KEY_JOG_ZX_MIN    0xf4
+#define ELS_KEY_JOG_ZX_MIN    0xcc
 #define ELS_KEY_JOG_ZX_MAX    0xe0
 
 #define ELS_KEY_LOCK          0xe2
-#define ELS_KEY_ENC_MULT      0xcc
+#define ELS_KEY_ENC_MULT      0xf4
 
 
 //-----------------------------------------------------------------------------
 // Layout
 //-----------------------------------------------------------------------------
 //
-// 0x1c 0x32 0x21 0x23  0x16 0x1e
-// 0x24 0x2b 0x34 0x33  0x26 0x25
-// 0x43 0x3b 0x42 0x4b  0x2e 0x36
+// 0xee 0x94 0xf8 0xf6
+// 0xd8 0xea 0xfa 0xf2
+// 0xd6 0xe6 0xe8
+// 0xd2 0xe4 0xcc 0xb4
+// 0xe0 0xf4 0xe2
 //
-//  A    B    C    D     M    N
-//  E    F    G    H     O    P
-//  I    J    K    L     Q    R
+//  Numlock  /  *  -
+//  7        8  9  +
+//  4        5  6
+//  1        2  3  OK
+//  0        BS DEL
 //
 //-----------------------------------------------------------------------------
 

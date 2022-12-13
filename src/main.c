@@ -125,10 +125,11 @@ int main(void) {
   els_config_setup();
 
 #ifdef USE_GLASS_RULER
-  els_dro_setup();
+  //els_dro_setup();
 #else
   hbm_dro_setup();
 #endif
+  hbm_dro_setup();
 
   els_stepper_setup();
   els_spindle_setup();

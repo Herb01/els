@@ -50,10 +50,12 @@ void els_dro_setup(void) {
 }
 
 void els_dro_zero_x(void) {
+  els_dro.xpos_zero = els_dro.xpos_um + els_dro.xpos_zero;
   els_dro.xpos_um = 0;
 }
 
 void els_dro_zero_z(void) {
+  els_dro.zpos_zero = els_dro.zpos_um + els_dro.zpos_zero;
   els_dro.zpos_um = 0;
 }
 
