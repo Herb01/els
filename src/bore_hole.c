@@ -782,7 +782,6 @@ static void els_bore_hole_set_xaxes(void) {
       els_bore_hole_display_axes();
       break;
     case ELS_KEY_SET_ZX_ORI:
-    	printf("In bore hole set zx\n");
       if (els_bore_hole.state == ELS_BORE_HOLE_SET_XAXES) {
         els_stepper_zero_x();
         els_dro_zero_x();
