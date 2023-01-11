@@ -38,7 +38,7 @@ extern "C" {
 #define ELS_Z_PUL_PORT        GPIOB
 #define ELS_Z_PUL_PIN         GPIO11
 
-#define ELS_Z_ENA_ACTIVE_LOW  0
+#define ELS_Z_ENA_ACTIVE_LOW  1
 
 //=============================================================================
 // X-Axis Pins
@@ -50,7 +50,7 @@ extern "C" {
 #define ELS_X_PUL_PORT        GPIOC
 #define ELS_X_PUL_PIN         GPIO11
 
-#define ELS_X_ENA_ACTIVE_LOW  0
+#define ELS_X_ENA_ACTIVE_LOW  1
 
 //=============================================================================
 // Spindle Encoder
