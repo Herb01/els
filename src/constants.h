@@ -34,9 +34,9 @@ extern "C" {
 #define ELS_Z_ENA_PORT        GPIOB
 #define ELS_Z_ENA_PIN         GPIO13
 #define ELS_Z_DIR_PORT        GPIOB
-#define ELS_Z_DIR_PIN         GPIO14
+#define ELS_Z_DIR_PIN         GPIO10
 #define ELS_Z_PUL_PORT        GPIOB
-#define ELS_Z_PUL_PIN         GPIO15
+#define ELS_Z_PUL_PIN         GPIO11
 
 #define ELS_Z_ENA_ACTIVE_LOW  1
 
