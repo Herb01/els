@@ -1,0 +1,2 @@
+Youtube: STM32 toolchain for Windows - Part 1 (CubeMX, GCC, Make and OpenOCD)
+Create the tool chain in c:\Users\Gebruikers\Documenten\dev\tools
