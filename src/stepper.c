@@ -216,7 +216,7 @@ static void els_stepper_move_x_accel(double mm, double speed_mm_s, bool accel) {
     }
 
     stepper.pos.xbusy = true;
-    stepper.xsteps += (int32_t)round(-mm * els_config->z_pulses_per_mm);
+    stepper.xsteps += (int32_t)round(-mm * els_config->x_pulses_per_mm);
   }
   else if (mm > 0) {
     int32_t delta = els_dro.xpos_um;
