@@ -41,11 +41,11 @@ typedef struct {
 // PA12 - DRO X-B (Int)
 // PA13 - RESERVED
 // PA14 - RESERVED
-// PA15 - RESERVED
+// PA15 - RESERVED Z-DIR
 //
 // PB0  - TFT RD
 // PB1  - DRO Z-A (Int)
-// PB2  - RESERVED
+// PB2  - RESERVED Z-PUL
 // PB3  - Spindle Enc A (Int)
 // PB4  - Spindle Enc B
 // PB5  - DRO Z-B (Int)
@@ -57,8 +57,8 @@ typedef struct {
 // PB11 - N/A
 // PB12 - RESERVED
 // PB13 - Z ENA
-// PB14 - Z DIR
-// PB15 - Z PUL
+// PB14 -
+// PB15 -
 //
 // PC0  -
 // PC1  -
@@ -70,12 +70,12 @@ typedef struct {
 // PC7  - Spindle Enc B (Timer)
 // PC8  - RESERVED
 // PC9  - RESERVED
-// PC10 -
-// PC11 -
+// PC10 - X DIR
+// PC11 - X PUL
 // PC12 - EEPROM SDA
 // PC13 - X ENA
-// PC14 - X DIR
-// PC15 - X PUL
+// PC14 -
+// PC15 -
 //
 // PH0  -
 // PH1  -
